@@ -7,6 +7,10 @@
 #define PORTA_MOT_E 1
 #define PORTA_MOT_D 2
 
+//definindo esquerda e direita pra curvas
+#define DIREITA 1
+#define ESQUERDA 0
+
 //definindo motores como globais
 AF_DCMotor* motor_esq;
 AF_DCMotor* motor_dir;
@@ -33,6 +37,8 @@ void loop()
   delay (5000);
 
   troca_marcha(&marcha, 0, &velocidade);
+
+  curva(DIREITA, &marcha, &velocidade);
 }
 
 
@@ -111,4 +117,21 @@ void set_motores(uint8_t velocidade, int direcao)
     motor_esq -> run(direcao);
     motor_dir -> run(direcao);
   }
+}
+
+void curva(uint8_t direcao, uint8_t* marcha, uint8_t* velocidade)
+{
+    troca_marcha(marcha, 1, velocidade);
+    if (direcao == ESQUERDA)
+    {
+        motor_esq -> run(BACKWARD);
+        motor_dir -> run(FORWARD);
+    }
+    else if (direcao == DIREITA)
+    {
+        motor_dir -> run(BACKWARD);
+        motor_esq -> run(FORWARD);
+    }
+    delay(200);
+   troca_marcha (marcha, 0, velocidade);  
 }
