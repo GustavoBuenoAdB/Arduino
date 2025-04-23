@@ -2,29 +2,47 @@
 
 // definicoes para as marchas
 #define N_MARCHAS 5
-#define MIN_VEL 155
+#define MIN_VEL 105
 
 // definicoes para o sensor
-#define DISTANCIA_MIM 25
+#define DISTANCIA_MIN 30
+#define ECHO 39
+#define TRIG 38
+#define PARAM_DIV_SENSOR 58.2
+
+// definicoes do botao
+#define PORTA_BOTAO 30
 
 //definicoes para curvas
-#define TEMPO_CURVA_ANG_M1 2
+#define TEMPO_CURVA_ANG_M1 3.17
 #define ESQUERDA 0
 #define DIREITA 1
 
 //definindo as portas usadas
-#define PORTA_MOT_E 1
-#define PORTA_MOT_D 2
+#define PORTA_MOT_E 2
+#define PORTA_MOT_D 1
 
 //definindo motores como globais
 AF_DCMotor motor_esq(PORTA_MOT_E);
 AF_DCMotor motor_dir(PORTA_MOT_D);
 
+
+// variaveis globais.
+
 uint8_t incremento_marcha; 
+int distancia;
+
+void troca_marcha(uint8_t* atual, uint8_t destino, uint8_t* velocidade);
+void set_motores(uint8_t velocidade, int direcao);
+void curva(int direcao, int angulo);
+int confere_distancia();
 
 void setup() 
 {
   incremento_marcha = (uint8_t) (255 - MIN_VEL) / N_MARCHAS;
+  //pinMode(PORTA_BOTAO, INPUT);
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
 }
 
 void loop() 
@@ -33,17 +51,45 @@ void loop()
   uint8_t marcha = 1;
 
   set_motores(velocidade, FORWARD);
+
+  //curva(DIREITA, 360);
+
+  int dist = confere_distancia();
+  if (dist < DISTANCIA_MIN)
+  {
+    curva(ESQUERDA, 60, &marcha, &velocidade);
+    int esq = confere_distancia();
+    delay(30);
+    curva(DIREITA, 120, &marcha, &velocidade);
+    int dir = confere_distancia();
+    delay(30);
+    curva(ESQUERDA, 60, &marcha, &velocidade);
+    if (esq > dir && esq > DISTANCIA_MIN)
+      curva(DIREITA, 90, &marcha, &velocidade);  
+    else if (esq < dir && dir > DISTANCIA_MIN)
+      curva(ESQUERDA, 90, &marcha, &velocidade);
+    else
+      curva(DIREITA, 180, &marcha, &velocidade);
+  }
+
+  //set_motores(0,FORWARD);
+
+  //delay (10000);
   
-  delay (10000);
-
-  //testando qual o angulo de uma rotacao em M1
-  curva(esquerda, 360);
-
-  //troca_marcha(&marcha, 1, &velocidade);
+ 
+  troca_marcha(&marcha, 4, &velocidade);
 
   
 }
 
+int confere_distancia()
+{
+  
+  digitalWrite(TRIG, HIGH);
+  delay(1);
+  digitalWrite(TRIG, LOW);
+  return ( pulseIn(ECHO, HIGH) / PARAM_DIV_SENSOR ); 
+}
 
 /**
  * @brief Troca de marcha, para cima ou para baixo.
@@ -66,14 +112,14 @@ void troca_marcha(uint8_t* atual, uint8_t destino, uint8_t* velocidade)
     for (i = *velocidade ; i < *velocidade + incremento_marcha ; i++)
     {
       set_motores(i, FORWARD);
-      delay(10);
+      delay(2);
     }
     //atualiza os parametros de referencia
     *velocidade = i;
     (*atual)++;
 
     // recursao para saltar mais de uma marcha
-    delay(1000);
+    //delay(1000);
     troca_marcha(atual, destino, velocidade);
   }
   
@@ -84,15 +130,15 @@ void troca_marcha(uint8_t* atual, uint8_t destino, uint8_t* velocidade)
     for (i = *velocidade ; i > *velocidade - incremento_marcha ; i--)
     {
       set_motores(i, FORWARD);
-      delay(10);
+      delay(2);
     }
     //atualiza os parametros de referencia
     *velocidade = i;
     (*atual)--;
 
     // recursao para saltar mais de uma marcha
-    delay(1000);
-    troca_marcha(atual, destino, velocidade);
+    //delay(1000);
+    troca_marcha(atual, 3, velocidade);
   }
 }
 
@@ -131,8 +177,12 @@ void set_motores(uint8_t velocidade, int direcao)
  * @param direcao a direcao da curva (DIREITA ou ESQUERDA).
  * @param angulo o angulo de rotacao da curva. (depende da macro TEMPO_CURVA_ANG_M1)
 */
-void curva(int direcao, uint8_t angulo)
+void curva(int direcao, int angulo, uint8_t* atual, uint8_t* velocidade)
 {
+   troca_marcha(atual, 1, velocidade);
+   motor_esq.setSpeed((*velocidade));
+   motor_dir.setSpeed((*velocidade));
+   
    if (direcao == ESQUERDA)
    {
      motor_esq.run(FORWARD);
