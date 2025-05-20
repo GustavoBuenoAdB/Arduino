@@ -1,0 +1,54 @@
+// possibilidades de leitura dos sensores 
+
+    // B B B B (nem sabe onde ta, se perdeu)
+    // B B B P (vai pra linha da direita)
+    // B B P B (ta saindo da trilha, ajeita um kadinho pra direita)
+    // B B P P (se perdeu ou pode ser uma curva em Z)
+    // B P B B (ta saindo da trilha, ajeita um kadinho pra esquerda)
+    // B P B P (acho que nem tem como)
+    // B P P B (ta perfeito segue retinho)
+    // B P P P (curva quadrada pra esquerda)
+    // P B B B (vai pra linha da esquerda)
+    // P B B P (que que aconteceu pq tem 2 linhas?)
+    // P B P B (acho que nem tem como)
+    // P B P P (acho que nem tem como)
+    // P P B B (se perdeu ou pode ser uma curva em Z)
+    // P P B P (acho que nem tem como)
+    // P P P B (curva quadrada pra esquerda)
+    // P P P P (fim de execução)
+
+    arvore de escolhas
+
+    
+    if (p2)
+        if (p3)
+        {
+            if (p1)
+            {
+                if (p4)
+                    para(); // P P P P
+                else //!p4
+                    curva_quadrada(); // P P P B
+            }
+            else //!p1
+            {
+                if (p4)
+                    curva_quadrada(); // B P P P
+                else //!p4
+                    reto(); // B P P B
+            }
+        }
+        else //!p3
+        {
+            if (!(p1 || p4))
+                curva_pouquinho(); // B P B B
+        }
+    else //!p2
+        if(!(p1 || p4))
+        {
+            if(p3)
+                curva_pouquinho; // B B P B
+            else //!p3
+                anda_sem_rumo(); // B B B B 
+        }
+        
