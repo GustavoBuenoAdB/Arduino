@@ -96,8 +96,8 @@ void define_Comando()
     // if (B - P - P - B) {...}
     if ( !(sen_Esq_Lado) && (sen_Esq_Meio) && (sen_Dir_Meio) && !(sen_Dir_Lado) )
     {
-        comando.mov_MotEsq = 1;
-        comando.mov_MotDir = 1;
+        comando.mov_MotEsq = FORWARD;
+        comando.mov_MotDir = FORWARD;
         comando.mov_velocidade = VEL_PADRAO;
         comando.mov_duracao = DURACAO_PADRAO;
     }
@@ -105,8 +105,8 @@ void define_Comando()
     // if (B - B - P - B) {...}
     else if ( !(sen_Esq_Lado) && !(sen_Esq_Meio) && (sen_Dir_Meio) && !(sen_Dir_Lado) )
     {
-        comando.mov_MotEsq = 0;
-        comando.mov_MotDir = -1;
+        comando.mov_MotEsq = RELEASE;
+        comando.mov_MotDir = BACKWARD;
         comando.mov_velocidade = VEL_PADRAO;
         comando.mov_duracao = DURACAO_CURTA;
     }
@@ -114,8 +114,8 @@ void define_Comando()
     // if (B - P - B - B) {...}
     else if ( !(sen_Esq_Lado) && (sen_Esq_Meio) && !(sen_Dir_Meio) && !(sen_Dir_Lado) )
     {
-        comando.mov_MotEsq = -1;
-        comando.mov_MotDir = 0;
+        comando.mov_MotEsq = BACKWARD;
+        comando.mov_MotDir = RELEASE;
         comando.mov_velocidade = VEL_PADRAO;
         comando.mov_duracao = DURACAO_CURTA;
     }
@@ -123,8 +123,8 @@ void define_Comando()
     // if (P - P - P - P) {...}
     else if ( (sen_Esq_Lado) && (sen_Esq_Meio) && (sen_Dir_Meio) && (sen_Dir_Lado) )
     {
-        comando.mov_MotEsq = 0;
-        comando.mov_MotDir = 0;
+        comando.mov_MotEsq = RELEASE;
+        comando.mov_MotDir = RELEASE;
     }
 
     // Situacao Problema.
@@ -132,8 +132,8 @@ void define_Comando()
     else if ( !(sen_Esq_Lado) && !(sen_Esq_Meio) && !(sen_Dir_Meio) && !(sen_Dir_Lado) )
     {
         // supondo um gap
-        comando.mov_MotEsq = 1;
-        comando.mov_MotDir = 1;
+        comando.mov_MotEsq = FORWARD;
+        comando.mov_MotDir = FORWARD;
         // diminui a velocidade pra tentar evitar de ignorar uma linha em s1 e s4
         comando.mov_velocidade = VEL_LENTA;
         comando.mov_duracao = DURACAO_CURTA;
@@ -142,8 +142,8 @@ void define_Comando()
     // if (B - P - P - P) ou (B - B - B - P) {...}
     else if ( !(sen_Esq_Lado) && ( ( (sen_Esq_Meio) && (sen_Dir_Meio) ) || ( !(sen_Esq_Meio) && !(sen_Dir_Meio) ) ) && (sen_Dir_Lado) )
     {
-        comando.mov_MotEsq = 1;
-        comando.mov_MotDir = -1;
+        comando.mov_MotEsq = FORWARD;
+        comando.mov_MotDir = BACKWARD;
         // diminui a velocidade pra tentar evitar de ignorar uma linha em s1 e s4
         comando.mov_velocidade = VEL_LENTA;
         comando.mov_duracao = DURACAO_ANG_CURVA_P_VEL_LENTA * 90;
@@ -152,8 +152,8 @@ void define_Comando()
     // if (P - P - P - B) ou (P - B - B - B) {...}
     else if ( (sen_Esq_Lado) && ( ( (sen_Esq_Meio) && (sen_Dir_Meio) ) || ( !(sen_Esq_Meio) && !(sen_Dir_Meio) ) ) && !(sen_Dir_Lado) )
     {
-        comando.mov_MotEsq = -1;
-        comando.mov_MotDir = 1;
+        comando.mov_MotEsq = BACKWARD;
+        comando.mov_MotDir = FORWARD;
         // diminui a velocidade pra tentar evitar de ignorar uma linha em s1 e s4
         comando.mov_velocidade = VEL_LENTA;
         comando.mov_duracao = DURACAO_ANG_CURVA_P_VEL_LENTA * 90;
@@ -163,24 +163,7 @@ void define_Comando()
 
 void executa_Comando()
 {
-    int dir_Esq, dir_Dir;
-
-    if (comando.mov_MotEsq > 0)
-        dir_Esq = FORWARD;
-    else if (comando.mov_MotEsq < 0)
-        dir_Esq = BACKWARD;
-    else
-        dir_Esq = RELEASE;
-    
-    if (comando.mov_MotDir > 0)
-        dir_Esq = FORWARD;
-    else if (comando.mov_MotDir < 0)
-        dir_Esq = BACKWARD;
-    else
-        dir_Esq = RELEASE;
-
-    set_Motores(comando.mov_velocidade, dir_Esq, dir_Dir);
-
+    set_Motores(comando.mov_velocidade, comando.mov_MotEsq, comando.mov_MotDir);
     delay(comando.mov_duracao);
 }
 
