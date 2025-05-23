@@ -8,18 +8,46 @@
 // Porta Sensor de Linha Preta Direito no centro
 #define PSLP_DIR_MEIO 10
 
+// Porta Motor Esquerdo
+#define PORTA_MOT_E 1
+// Porta Motor Direito
+#define PORTA_MOT_D 2
+
+// Definicoes de Valores para traducao real ===
+
+// velocidades
+#define VEL_LENTA 1
+#define VEL_PADRAO 1
+#define VEL_RAPIDA 1
+
+// duracoes
+#define DURACAO_CURTA 1
+#define DURACAO_PADRAO 1
+#define DURACAO_LONGA 1
+
+// duracoes para cada angulo de curva em cada velocidade
+#define DURACAO_ANG_CURVA_P_VEL_LENTA 1
+#define DURACAO_ANG_CURVA_P_VEL_PADRAO 1
+#define DURACAO_ANG_CURVA_P_VEL_RAPIDA 1
+
+
 // globais para armazenar a leitura dos sensores de linha
 int sen_Esq_Lado = 0;
 int sen_Dir_Lado = 0;
 int sen_Esq_Meio = 0;
 int sen_Dir_Meio = 0;
 
-typedef struct Vetor2i{
-    int x;
-    int y;
-} Vetor2i;
+typedef struct Comando
+{
+    int mov_MotEsq; // define se o motor avança (1) retrocede (-1) ou fica parado (0).
+    int mov_MotDir; // define se o motor avança (1) retrocede (-1) ou fica parado (0).
+    int mov_duracao; // duracao em ms do movimento dos motores.
+    uint8_t mov_velocidade; // velocidade pra aplicar idealmente em ambos os motores.
+    int leitura_anterior[4]; // leitura anterior dos 4 sensores de linha.
 
-Vetor2i rotacao;
+} Comando;
+
+Comando comando;
 
 #define MOV_LEVE 1
 #define MOV_BRUCO 2
@@ -28,7 +56,7 @@ Vetor2i rotacao;
 AF_DCMotor Motor_esq(PORTA_MOT_E);
 AF_DCMotor Motor_dir(PORTA_MOT_D);
 
-uint_8 velocidade = 200;
+uint8_t velocidade = 200;
 
 #define INC_MOTOR_REAL 0.02 // 2%
 double porcentagem_motor_Esq_real = 0.9;
@@ -46,15 +74,14 @@ void setup()
 // loop de estados simples para gerar rotina
 void loop()
 {
-    le_linhas();
-    define_curva();
-    anda();
-    delay();
+    atualiza_Sensores(); // atualiza os sensores 
+    define_Comando(); // gera um Comando baseado na Interpretacao dos sensores
+    executa_Comando(); // executa o comando gerado anteriormente
 }
 
-// funcao que inicializa e atualiza todas as informacoes nescessarias para fazer a escolha de rotacao
-void le_linhas()
+void atualiza_Sensores()
 {
+    // Atualizando sensores de Linha Preta
     sen_Esq_Lado = digitalRead(PSLP_ESQ_LADO);
     sen_Dir_Lado = digitalRead(PSLP_DIR_LADO);
     sen_Esq_Meio = digitalRead(PSLP_ESQ_MEIO);
@@ -62,100 +89,99 @@ void le_linhas()
     delay(1); // delay pra ler os sensores
 }
 
-// função que avalia as informações lidas e escolhe que caminho seguir
-void define_curva()
+void define_Comando()
 {
-    // possibilidades de leitura
-    // definir o comportamento pra mais de uma leitura igual e nao só na primeira
 
-    //arvore de escolhas
-    if (sen_Esq_Meio)
+    // Situacao Ideal.
+    // if (B - P - P - B) {...}
+    if ( !(sen_Esq_Lado) && (sen_Esq_Meio) && (sen_Dir_Meio) && !(sen_Dir_Lado) )
     {
-        if (sen_Dir_Meio)
-        {
-            if (sen_Esq_Lado)
-            {
-                if (sen_Dir_Lado)
-                    para(); // P P P P
-                else // !sen_Dir_Lado
-                    curva_quadrada_esq(); // P P P B
-            }
-            else // !sen_Esq_Lado
-            {
-                if (sen_Dir_Lado)
-                    curva_quadrada_dir(); // B P P P
-                else // !sen_Dir_Lado
-                    reto(); // B P P B
-            }
-        }
-        else // !sen_Dir_Meio
-        {
-            if ( !(sen_Esq_Lado || sen_Dir_Lado) )
-                curva_pouquinho_dir(); // B P B B
-        }
+        comando.mov_MotEsq = 1;
+        comando.mov_MotDir = 1;
+        comando.mov_velocidade = VEL_PADRAO;
+        comando.mov_duracao = DURACAO_PADRAO;
     }
-    else // !sen_Esq_Meio
+
+    // if (B - B - P - B) {...}
+    else if ( !(sen_Esq_Lado) && !(sen_Esq_Meio) && (sen_Dir_Meio) && !(sen_Dir_Lado) )
     {
-        if(sen_Dir_Meio)
-            if(!(sen_Esq_Lado || sen_Dir_Lado))
-                curva_pouquinho_esq(); // B B P B
-        else // !sen_Dir_Meio
-        {
-            if( !(sen_Esq_Lado || sen_Dir_Lado) )
-                anda_sem_rumo(); // B B B B
-            else if (sen_Esq_Lado)
-                curva_quadrada_esq(); // P B B B
-            else if (sen_Dir_Lado)
-                curva_quadrada_dir(); // B B B P
-        }
+        comando.mov_MotEsq = 0;
+        comando.mov_MotDir = -1;
+        comando.mov_velocidade = VEL_PADRAO;
+        comando.mov_duracao = DURACAO_CURTA;
+    }
+
+    // if (B - P - B - B) {...}
+    else if ( !(sen_Esq_Lado) && (sen_Esq_Meio) && !(sen_Dir_Meio) && !(sen_Dir_Lado) )
+    {
+        comando.mov_MotEsq = -1;
+        comando.mov_MotDir = 0;
+        comando.mov_velocidade = VEL_PADRAO;
+        comando.mov_duracao = DURACAO_CURTA;
+    }
+
+    // if (P - P - P - P) {...}
+    else if ( (sen_Esq_Lado) && (sen_Esq_Meio) && (sen_Dir_Meio) && (sen_Dir_Lado) )
+    {
+        comando.mov_MotEsq = 0;
+        comando.mov_MotDir = 0;
+    }
+
+    // Situacao Problema.
+    // if (B - B - B - B) {...}
+    else if ( !(sen_Esq_Lado) && !(sen_Esq_Meio) && !(sen_Dir_Meio) && !(sen_Dir_Lado) )
+    {
+        // supondo um gap
+        comando.mov_MotEsq = 1;
+        comando.mov_MotDir = 1;
+        // diminui a velocidade pra tentar evitar de ignorar uma linha em s1 e s4
+        comando.mov_velocidade = VEL_LENTA;
+        comando.mov_duracao = DURACAO_CURTA;
+    }
+
+    // if (B - P - P - P) ou (B - B - B - P) {...}
+    else if ( !(sen_Esq_Lado) && ( ( (sen_Esq_Meio) && (sen_Dir_Meio) ) || ( !(sen_Esq_Meio) && !(sen_Dir_Meio) ) ) && (sen_Dir_Lado) )
+    {
+        comando.mov_MotEsq = 1;
+        comando.mov_MotDir = -1;
+        // diminui a velocidade pra tentar evitar de ignorar uma linha em s1 e s4
+        comando.mov_velocidade = VEL_LENTA;
+        comando.mov_duracao = DURACAO_ANG_CURVA_P_VEL_LENTA * 90;
+    }
+
+    // if (P - P - P - B) ou (P - B - B - B) {...}
+    else if ( (sen_Esq_Lado) && ( ( (sen_Esq_Meio) && (sen_Dir_Meio) ) || ( !(sen_Esq_Meio) && !(sen_Dir_Meio) ) ) && !(sen_Dir_Lado) )
+    {
+        comando.mov_MotEsq = -1;
+        comando.mov_MotDir = 1;
+        // diminui a velocidade pra tentar evitar de ignorar uma linha em s1 e s4
+        comando.mov_velocidade = VEL_LENTA;
+        comando.mov_duracao = DURACAO_ANG_CURVA_P_VEL_LENTA * 90;
     }
 }
 
-// funcoes de definicao de rotacao // TEM MUITO O QUE MELHORAR, È SÒ UMA BASE
 
-void para()
+void executa_Comando()
 {
-    rotacao.x = 0;
-    rotacao.y = 0;
-    set_motores(0, RELEASE, RELEASE);
-}
-void reto()
-{
-    rotacao.x = 0;
-    rotacao.y = 0;
-}
-void curva_quadrada_esq()
-{
-    rotacao.x = 0;
-    rotacao.y = 90;
-}
-void curva_quadrada_dir()
-{
-    rotacao.x = 0;
-    rotacao.y = -90;
-}
-void curva_pouquinho_esq()
-{
-    rotacao.x = 0;
-    rotacao.y = 30;
-}
-void curva_pouquinho_dir()
-{
-    rotacao.x = 0;
-    rotacao.y = -30;
-}
-void anda_sem_rumo()
-{
-    reto();
-}
+    int dir_Esq, dir_Dir;
 
-// dada a escolha de caminho essa função segue o caminho
-void anda()
-{
-    if (rotacao.y > 0)
-        curva(ESQUERDA, rotacao.y);
-    else if (rotacao.y < 0)
-        curva(DIREITA, abs(rotacao.y));
+    if (comando.mov_MotEsq > 0)
+        dir_Esq = FORWARD;
+    else if (comando.mov_MotEsq < 0)
+        dir_Esq = BACKWARD;
+    else
+        dir_Esq = RELEASE;
+    
+    if (comando.mov_MotDir > 0)
+        dir_Esq = FORWARD;
+    else if (comando.mov_MotDir < 0)
+        dir_Esq = BACKWARD;
+    else
+        dir_Esq = RELEASE;
+
+    set_Motores(comando.mov_velocidade, dir_Esq, dir_Dir);
+
+    delay(comando.mov_duracao);
 }
 
 
@@ -165,14 +191,4 @@ void set_motores(uint8_t velocidade, int direcao_esq, int direcao_dir)
   Motor_dir.setSpeed((uint8_t) (velocidade * porcentagem_motor_Dir_real));
   Motor_esq.run(direcao_esq);
   Motor_dir.run(direcao_dir);
-}
-
-void curva(int direcao, double angulo)
-{  
-  if (direcao == ESQUERDA)
-    set_motores(velocidade, FORWARD, BACKWARD);
-  else if (direcao == DIREITA)
-    set_motores(velocidade, BACKWARD, FORWARD);
-
-  delay(MOV_DELAY * angulo);
 }
