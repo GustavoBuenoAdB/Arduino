@@ -103,7 +103,8 @@ void loop()
             }
             digitalWrite(led_lido, LOW);
         }
-        estado = acerto;
+        if (estado != erro)
+            estado = acerto;
         break;
     }
     case acerto:
@@ -145,7 +146,7 @@ int le_led_usuario()
                 atual = P_LED_VERM;
             //delay(200);
         }
-      while (digitalRead(P_BOTAO_TROCA)); 
+        while (!digitalRead(P_BOTAO_TROCA)); 
         digitalWrite(atual, HIGH);
     }
 
@@ -162,7 +163,7 @@ void animacaozinha()
         digitalWrite(i, LOW);
     }
 }
-void pisca(int tempo)
+void pisca(unsigned int tempo)
 {
     for (int i = P_LED_VERM ; i < P_LED_CINZ + 1 ; i++)
         digitalWrite(i, HIGH);
