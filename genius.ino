@@ -1,5 +1,3 @@
-
-
 // convencionado que P_LED_VERM é a menor porta
 // convencionado que P_LED_CINZ é a maior porta
 // os leds tem incremento unitario nos pinos adjacentes
@@ -13,7 +11,7 @@
 #define P_BOTAO_CONFIRMA 2
 #define P_BOTAO_TROCA 3
 
-#define TAM_MAX 20
+#define TAM_MAX 100
 
 enum estados{
   desligado,
@@ -24,8 +22,6 @@ enum estados{
   erro
 };
 
-
-long semente;
 int estado;
 int sequencia[TAM_MAX];
 int atual_seq;
@@ -65,7 +61,7 @@ void loop()
     case iniciando:
     {
         animacaozinha();
-        pisca(1000);
+        //pisca(2000);
         atual_seq = 0;
         estado = mostra_sequencia;
         break;
@@ -79,7 +75,7 @@ void loop()
             digitalWrite(sequencia[i], HIGH);
             delay(1000);
             digitalWrite(sequencia[i], LOW);
-            delay(300);
+            delay(500);
         }
         estado = lendo_sequencia;
         break;
@@ -91,17 +87,19 @@ void loop()
             int led_lido = le_led_usuario();
             if (led_lido != sequencia[i])
             {
+                digitalWrite(sequencia[i], HIGH);
+                delay(1000);
+                digitalWrite(sequencia[i], LOW);
                 estado = erro;
                 break;
             }
             for(int i = 0 ; i < 5 ; i++)
             {
-                digitalWrite(led_lido, LOW);
-                delay(100);
+                delay(200);
                 digitalWrite(led_lido, HIGH);
-                delay(100);
+                delay(200);
+                digitalWrite(led_lido, LOW);
             }
-            digitalWrite(led_lido, LOW);
         }
         if (estado != erro)
             estado = acerto;
@@ -116,7 +114,6 @@ void loop()
     }
     case erro:
     {
-        animacaozinha();
         animacaozinha();
         estado = desligado;
         break;
@@ -136,30 +133,34 @@ int led_aleatorio()
 int le_led_usuario()
 {
     int atual = P_LED_VERM;
-    while (!digitalRead(P_BOTAO_CONFIRMA))
+    digitalWrite(atual, HIGH);
+    bool conf = false;
+    bool troca = false;
+
+    while (!conf)
     {
-        if (digitalRead(P_BOTAO_TROCA))
+        conf = digitalRead(P_BOTAO_CONFIRMA);
+        troca = digitalRead(P_BOTAO_TROCA);
+        delay(300);
+
+        if (troca)
         {
             digitalWrite(atual, LOW);
             atual++;
             if (atual > P_LED_CINZ)
                 atual = P_LED_VERM;
-            //delay(200);
-        }
-        while (!digitalRead(P_BOTAO_TROCA)); 
-        digitalWrite(atual, HIGH);
+            digitalWrite(atual, HIGH);         
+        }       
     }
-
-    while (digitalRead(P_BOTAO_CONFIRMA)); 
     return atual;
 }
 
 void animacaozinha()
 {
-    for (int i = 9 ; i < 14 ; i++)
+    for (int i = P_LED_VERM ; i < P_LED_CINZ + 1 ; i++)
     {
         digitalWrite(i, HIGH);
-        delay(200);
+        delay(300);
         digitalWrite(i, LOW);
     }
 }
